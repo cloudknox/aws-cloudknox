@@ -188,7 +188,6 @@ Resources:
   CloudKnoxStackSetLambdaExecutionRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub "CloudKnoxStackSetLambdaExecutionRole-${AWS::Region}"
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -308,7 +307,6 @@ Resources:
   CloudKnoxTriggerLifecycleEventLambdaRole:
     Type: 'AWS::IAM::Role'
     Properties:
-      RoleName: !Sub cloudknox-triggerlifecyclelambdarole-${AWS::Region}
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -324,7 +322,8 @@ Resources:
             Statement:
               - Sid: '1'
                 Action:
-                  - 's3:*'
+                  - 's3:GetObject'
+                  - 's3:PutObject'
                 Effect: Allow
                 Resource:
                   - !Sub arn:${AWS::Partition}:s3:::${SourceBucket}
@@ -344,18 +343,14 @@ Resources:
                 Resource: '*'
               - Sid: '4'
                 Action:
-                  - 'secretsmanager:*'
+                  - 'secretsmanager:GetSecretValue'
+                  - 'secretsmanager:ListSecrets'
                 Effect: Allow
-                Resource: '*'
-              - Sid: '5'
-                Action:
-                  - 'sts:AssumeRole'
-                Effect: Allow
-                Resource: '*'
+                Resource: !Join [':',['arn:aws:secretsmanager', !Ref 'AWS::Region', !Ref 'AWS::AccountId','secret','CloudKnoxSecretString-*']]
       ManagedPolicyArns:
         - !Sub 'arn:${AWS::Partition}:iam::aws:policy/ReadOnlyAccess'
         - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
-     
+    
   PermissionForEventsToInvokeLambdachk:
     Type: AWS::Lambda::Permission
     Properties:
