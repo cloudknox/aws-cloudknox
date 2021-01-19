@@ -68,26 +68,6 @@ Conditions:
 
 Resources:
 
-# SSM Automation Role
-  AutomationAssumeRole:
-    Type: 'AWS::IAM::Role'
-    Properties:
-      RoleName: !Sub cloudknox-automationassumerole-${AWS::Region}
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - ssm.amazonaws.com
-                - events.amazonaws.com
-                - ec2.amazonaws.com
-            Action:
-              - 'sts:AssumeRole'
-      Path: /
-      ManagedPolicyArns:
-        - !Sub "arn:${AWS::Partition}:iam::aws:policy/AdministratorAccess"
-
 # S3 Bucket for CloudKnox Remediation Lambda
   S3CloudKnoxRemediationBucket:
     Type: AWS::S3::Bucket
