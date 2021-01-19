@@ -11,13 +11,6 @@ Description: AWS Secrets Manager, SSM Automation, Remediation Lambda for CloudKn
 ## This code is made available under the MIT-0 license. See the LICENSE file.
 
 
-Outputs:
-  AutomationAssumeRoleArn:
-    Description: Arn for AutomationAssumeRole
-    Value: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${AutomationAssumeRole}'
-    Export: # added to export
-      Name: CloudKnox-AutomationAssumeRoleArn
-
 Parameters:
   accessKey:
     Description: >-
