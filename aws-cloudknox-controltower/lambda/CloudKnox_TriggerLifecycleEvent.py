@@ -1,4 +1,4 @@
-
+""" Lambda for Control Tower Lifecyle Event Trigger with CloudKnox and AWS Control Tower """
 #  Lambda for Control Tower Lifecyle Event Trigger with CloudKnox and AWS Control Tower
 #  -  Uses CloudKnox Authenticate and Add Account APIs
 
@@ -10,197 +10,172 @@
 
 
 import json
-import sys
-import datetime
-import boto3
-import botocore
-import datetime
 import logging
-import urllib.request
 import time
 import os
-import random
-from botocore.exceptions import ClientError
-
-try:
-    import liblogging
-except ImportError:
-    pass
-
 import http.client
-import mimetypes
-import ssl
-
+import boto3
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 stackset_list = ['CloudKnoxMemberRolev1']
 result = {"ResponseMetadata":{"HTTPStatusCode":"400"}}
-       
 
 ## AWS Secrets Manager - retrieve secretstring
 def get_secret_value(key='CloudKnoxSecretString'):
-          secretsmanager = boto3.client('secretsmanager')
-          secret_list = secretsmanager.list_secrets()['SecretList']
-          output = {}
-          for s in secret_list:
-              if key in s.values():
-                  output = secretsmanager.get_secret_value(SecretId=key)['SecretString']
-          return(output)
-
+    """Get secret value."""
+    secretsmanager = boto3.client('secretsmanager')
+    secret_list = secretsmanager.list_secrets()['SecretList']
+    output = {}
+    for secret in secret_list:
+        if key in secret.values():
+            output = secretsmanager.get_secret_value(SecretId=key)['SecretString']
+    return output
 
 ##  Add Account CloudKnox API:
-def addCloudKnoxAccount(apiId, accessToken, serviceId, timestamp,url,CloudKnoxSentryAccountId, accId, port):
+def add_cloudknox_account(api_id,access_token,service_id,timestamp,url,
+			cloudknox_sentry_account_id,acc_id,port):
+    """Add CloudKnox account."""
     conn = http.client.HTTPSConnection(url, port)
     content_type = "application/json"
-    print('inside addCloudKnoxAccount')
-    print('apiId: '+ apiId )
-    print('accessToken: '+ accessToken )
-    print('serviceId: '+ serviceId )
+    print('inside add_cloudknox_account')
+    print('api_id: '+ api_id )
+    print('accessToken: '+ access_token )
+    print('serviceId: '+ service_id )
     print('timestamp: '+ timestamp )
     print('url: ' + url)
-    print('CloudKnoxSentryAccountId: ' + CloudKnoxSentryAccountId)
-    print('accId: ' + accId)
-    
+    print('CloudKnoxSentryAccountId: ' + cloudknox_sentry_account_id)
+    print('accId: ' + acc_id)
+
     headers = {
-      'X-CloudKnox-Access-Token': accessToken,
-      'X-CloudKnox-API-Id': apiId,
-      'X-CloudKnox-Service-Account-Id': serviceId,
+      'X-CloudKnox-Access-Token': access_token,
+      'X-CloudKnox-API-Id': api_id,
+      'X-CloudKnox-Service-Account-Id': service_id,
       'X-CloudKnox-Timestamp-Millis': timestamp,
       'Content-Type': content_type
     }
-    
-    endTime = int(round(time.time() * 1000))
-    startTime = endTime - (90*86400*1000)
-    
-    cloudknoxDict = {}
-    cloudknoxDict['authorizationSystemId'] = CloudKnoxSentryAccountId
-    cloudknoxDict['accountsToAdd'] = [{'id': accId,
-                                       'roleName': 'IAM_R_KNOX_SECURITY_XA'}]
 
-    payload = json.dumps(cloudknoxDict)
+    cloudknox_dict = {}
+    cloudknox_dict['authorizationSystemId'] = cloudknox_sentry_account_id
+    cloudknox_dict['accountsToAdd'] = [{'id': acc_id,
+                                        'roleName': 'IAM_R_KNOX_SECURITY_XA'}]
+
+    payload = json.dumps(cloudknox_dict)
 
     print('payload: ' + payload)
-    
+
     conn.request("POST", "/api/v2/organization/auth-systems/aws/add", payload, headers)
     res = conn.getresponse()
     data = res.read()
     data_raw = data.decode()
     print('data_raw: ' + data_raw)
-    dataResponse = json.loads(data.decode("utf-8"))
-
-    return
+    json.loads(data.decode("utf-8"))
 
 ## Authenticate CloudKnox API - Retrieve accessToken:
-def getAccessToken(serviceId,timestamp,accessKey,secretKey,url,port):
+def get_access_token(service_id,timestamp,access_key,secret_key,url,port):
+    """Get CloudKnox access token."""
     conn = http.client.HTTPSConnection(url, port)
     content_type = "application/json"
-    print('serviceId-accessToken: '+ serviceId )
+    print('serviceId-accessToken: '+ service_id )
     print('timestamp-accessToken: '+ timestamp )
-    print('accessKey-accessToken: '+ accessKey )
-    print('secretKey-accessToken: '+ secretKey )
+    print('accessKey-accessToken: '+ access_key )
+    print('secretKey-accessToken: '+ secret_key )
     print('url-accessToken: ' + url)
 
     headers = {
-      'X-CloudKnox-Service-Account-Id': serviceId,
+      'X-CloudKnox-Service-Account-Id': service_id,
       'X-CloudKnox-Timestamp-Millis': timestamp,
       'Content-Type': content_type
     }
 
-    cloudknoxDict = {}
-    cloudknoxDict['serviceAccountId'] = serviceId
-    cloudknoxDict['accessKey'] = accessKey
-    cloudknoxDict['secretKey'] = secretKey
+    cloudknox_dict = {}
+    cloudknox_dict['serviceAccountId'] = service_id
+    cloudknox_dict['accessKey'] = access_key
+    cloudknox_dict['secretKey'] = secret_key
 
-    payload = json.dumps(cloudknoxDict)
+    payload = json.dumps(cloudknox_dict)
     print('payload-accessToken: ' + payload)
-    
+
     conn.request("POST", "/api/v2/service-account/authenticate", payload, headers)
     res = conn.getresponse()
     data = res.read()
     data_raw = data.decode()
     print('data_raw: ' + data_raw)
-    dataResponse = json.loads(data.decode("utf-8"))
-    print('accessToken: ' + dataResponse['accessToken'])
-    return dataResponse['accessToken']
+    data_response = json.loads(data.decode("utf-8"))
+    print('accessToken: ' + data_response['accessToken'])
+    return data_response['accessToken']
 
 def lambda_handler(event, context):
-    
+    """Handle new account create."""
+
     ## CloudKnox Details in Secrets Manager
-    secretList = json.loads(get_secret_value('CloudKnoxSecretString'))
-    serviceId=""
-    apiId=""
-    accessKey=""
-    secretKey=""
-    accessToken=""
-    accountId=""
+    secret_list = json.loads(get_secret_value('CloudKnoxSecretString'))
+    service_id=""
+    api_id=""
+    access_key=""
+    secret_key=""
     url=""
-    accessToken=""
-    
-    serviceId_key='serviceId'
-    apiId_key='apiId'
-    accessKey_key='accessKey'
-    secretKey_key='secretKey'
-    accountId_key= 'accountId'
+
+    service_id_key='serviceId'
+    api_id_key='apiId'
+    access_key_key='accessKey'
+    secret_key_key='secretKey'
     url_key='url'
-     
-    if serviceId_key in secretList:
-        serviceId = secretList[serviceId_key]
-    if apiId_key in secretList:
-        apiId = secretList[apiId_key]
-    if accessKey_key in secretList:
-        accessKey = secretList[accessKey_key]
-    if secretKey_key in secretList:
-        secretKey = secretList[secretKey_key]
-    if accountId_key in secretList:
-        accountId = secretList[accountId_key]
-    if url_key in secretList:
-        url = secretList[url_key]
+
+    if service_id_key in secret_list:
+        service_id = secret_list[service_id_key]
+    if api_id_key in secret_list:
+        api_id = secret_list[api_id_key]
+    if access_key_key in secret_list:
+        access_key = secret_list[access_key_key]
+    if secret_key_key in secret_list:
+        secret_key = secret_list[secret_key_key]
+    if url_key in secret_list:
+        url = secret_list[url_key]
 
     millis = int(round(time.time() * 1000))
     timestamp = str(millis)
-    
-    accessToken = getAccessToken(serviceId,timestamp,accessKey,secretKey,url,443)
-    print('accessToken is: ' + accessToken)
 
-    masterAcct = event['account']
-    CloudKnoxSentryAccountId = os.environ['CloudKnoxSentryAccountId']
-    eventDetails = event['detail']
-    regionName = eventDetails['awsRegion']
-    eventName = eventDetails['eventName']
-    srvEventDetails = eventDetails['serviceEventDetails']
-    if eventName == 'CreateManagedAccount' or eventName == 'UpdateManagedAccount':
-        newAccInfo = {}
+    access_token = get_access_token(service_id,timestamp,access_key,secret_key,url,443)
+    print('accessToken is: ' + access_token)
+
+    cloudknox_sentry_account_id = os.environ['CloudKnoxSentryAccountId']
+    event_details = event['detail']
+    region_name = event_details['awsRegion']
+    event_name = event_details['eventName']
+    srv_event_details = event_details['serviceEventDetails']
+    if event_name == 'CreateManagedAccount' or event_name == 'UpdateManagedAccount':
+        new_acc_info = {}
         logger.info('Event Processed Sucessfully')
-        if eventName == 'CreateManagedAccount':
-            newAccInfo = srvEventDetails['createManagedAccountStatus']
-        if eventName == 'UpdateManagedAccount':
-            newAccInfo = srvEventDetails['updateManagedAccountStatus']
-        cmdStatus = newAccInfo['state']
-        if cmdStatus == 'SUCCEEDED':
-            accId = newAccInfo['account']['accountId']
+        if event_name == 'CreateManagedAccount':
+            new_acc_info = srv_event_details['createManagedAccountStatus']
+        if event_name == 'UpdateManagedAccount':
+            new_acc_info = srv_event_details['updateManagedAccountStatus']
+        cmd_status = new_acc_info['state']
+        if cmd_status == 'SUCCEEDED':
+            acc_id = new_acc_info['account']['accountId']
             cloudformation = boto3.client('cloudformation')
             for item in stackset_list:
                 try:
-                    print('ctlambda-apiId: '+ apiId )
-                    print('ctlambda-eventName: ' + eventName)
-                    print('ctlambda-accessToken: '+ accessToken )
-                    print('ctlambda-serviceId: '+ serviceId )
+                    print('ctlambda-apiId: '+ api_id )
+                    print('ctlambda-eventName: ' + event_name)
+                    print('ctlambda-accessToken: '+ access_token )
+                    print('ctlambda-serviceId: '+ service_id )
                     print('ctlambda-timestamp: '+ timestamp )
                     print('ctlambda-url: ' + url)
-                    print('ctlambda-CloudKnoxSentryAccountId: ' + CloudKnoxSentryAccountId)
-                    print('ctlambda-regionName: ' + regionName)
+                    print('ctlambda-CloudKnoxSentryAccountId: ' + cloudknox_sentry_account_id)
+                    print('ctlambda-regionName: ' + region_name)
                     print('ctlambda-StackSetName: ' + item)
-                    print('ctlambda-accId: ' + accId)
-                    result = cloudformation.create_stack_instances(StackSetName=item,Accounts=[accId], Regions=[regionName])
-                    logger.info('Processed {} Sucessfully'.format(item))
-                    addCloudKnoxAccount(apiId, accessToken, serviceId, timestamp, url,CloudKnoxSentryAccountId, accId, 443)
+                    print('ctlambda-accId: ' + acc_id)
+                    cloudformation.create_stack_instances(StackSetName=item,
+							  Accounts=[acc_id], Regions=[region_name])
+                    logger.info('Processed %s Sucessfully', item)
+                    add_cloudknox_account(api_id, access_token, service_id, timestamp, url,
+					cloudknox_sentry_account_id, acc_id, 443)
                 except Exception as e:
-                    logger.error('Unable to launch in:{}, REASON: {}'.format(item, e))
+                    logger.error('Unable to launch in:%s, REASON: %s', item, e)
         else:
-            logger.info('Unsucessful Event Recieved. SKIPPING :{}'.format(event))
-            return(False)
+            logger.info('Unsucessful Event Received. SKIPPING :%s', event)
+            return False
     else:
-        logger.info('Control Tower Event Captured :{}'.format(event))
-  
-    return 
+        logger.info('Control Tower Event Captured :%s', event)
