@@ -175,16 +175,22 @@ Resources:
                   - 'logs:PutLogEvents'
                   - 'logs:DescribeLogStreams'
                 Effect: Allow
-                Resource: '*'
+                Resource: !Join [':',['arn:aws:logs', !Ref 'AWS::Region', !Ref 'AWS::AccountId', 'log-group', '/aws/lambda/CloudKnox_TriggerLifecyleEvent:*']]
               - Sid: '4'
                 Action:
                   - 'secretsmanager:GetSecretValue'
                   - 'secretsmanager:ListSecrets'
                 Effect: Allow
                 Resource: !Join [':',['arn:aws:secretsmanager', !Ref 'AWS::Region', !Ref 'AWS::AccountId','secret','CloudKnoxSecretString-*']]
+              - Sid: '5'
+                Action:
+                  - 'kms:Decrypt'
+                Effect: Allow
+                Resource: !ImportValue CloudKnoxControlTowerKMSKeyArn
       ManagedPolicyArns:
         - !Sub 'arn:${AWS::Partition}:iam::aws:policy/ReadOnlyAccess'
         - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+
     
   PermissionForEventsToInvokeLambdachk:
     Type: AWS::Lambda::Permission

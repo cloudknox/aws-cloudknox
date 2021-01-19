@@ -11,6 +11,14 @@ Description: AWS Secrets Manager, SSM Automation, Remediation Lambda for CloudKn
 ## This code is made available under the MIT-0 license. See the LICENSE file.
 
 
+
+Outputs:
+  CloudKnoxControlTowerKMSKeyArn:
+    Description: Arn for KMS Key for encrypting cloudknox secret
+    Value: !GetAtt CloudKnoxControlTowerKMSKey.Arn
+    Export: # added to export
+      Name: CloudKnoxControlTowerKMSKeyArn
+
 Parameters:
   accessKey:
     Description: >-
@@ -71,6 +79,9 @@ Resources:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
       AccessControl: BucketOwnerFullControl
+      LoggingConfiguration:
+        DestinationBucketName: !Ref LoggingBucket
+        LogFilePrefix: testing-logs
       LifecycleConfiguration:
         Rules:
           -
@@ -90,15 +101,40 @@ Resources:
       VersioningConfiguration:
         Status: Enabled
 
+  LoggingBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      AccessControl: LogDeliveryWrite
+      
+  S3CloudKnoxRemediationBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref S3CloudKnoxRemediationBucket
+      PolicyDocument:
+        Statement:
+          -
+            Action:
+              - 's3:GetObject'
+              - 's3:PutObject'
+            Effect: "Allow"
+            Resource:
+              - !Sub arn:${AWS::Partition}:s3:::${S3CloudKnoxRemediationBucket}
+              - !Sub arn:${AWS::Partition}:s3:::${S3CloudKnoxRemediationBucket}/*
+            Principal:
+              AWS:
+              - !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:root'
+
+
 # Secrets Management - CloudKnox Credentials
 
-#Create Secret 
+  #Create Secret 
   CloudKnoxSecretString:
     Type: AWS::SecretsManager::Secret
     Condition: CreateNewCloudKnoxSecret
     Properties:
       Description: Credentials required for CloudKnox
       Name: CloudKnoxSecretString
+      KmsKeyId: !GetAtt CloudKnoxControlTowerKMSKey.Arn
       SecretString:
         Fn::Join:
         - ''
@@ -115,3 +151,56 @@ Resources:
           - '","accountId": "'
           - Ref: AWS::AccountId
           - '"}'
+
+  CloudKnoxControlTowerKMSKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: "This is KMS Key Id used to encrypt/decrypt the Secret"
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: '2012-10-17'
+        Id: key-default-1
+        Statement:
+          - Sid: Allow administration of the key
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action:
+              - kms:Create*
+              - kms:Describe*
+              - kms:Enable*
+              - kms:List*
+              - kms:Put*
+              - kms:Update*
+              - kms:Revoke*
+              - kms:Disable*
+              - kms:Get*
+              - kms:Delete*
+              - kms:ScheduleKeyDeletion
+              - kms:CancelKeyDeletion
+            Resource: '*'
+          - Sid: Allow use of the key
+            Effect: Allow
+            Principal:
+              AWS: !Sub ${AWS::AccountId}
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt
+              - kms:GenerateDataKey
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: '*'
+            Condition:
+              StringEquals:
+                kms:ViaService: !Sub secretsmanager.${AWS::Region}.amazonaws.com
+                kms:CallerAccount: !Sub ${AWS::AccountId}
+
+  CloudKnoxControlTowerKMSAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub "alias/CloudKnox-Control-Tower-${AWS::StackName}"
+      TargetKeyId:
+        Ref: CloudKnoxControlTowerKMSKey
+
+
