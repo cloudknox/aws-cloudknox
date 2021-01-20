@@ -83,8 +83,6 @@ Resources:
 # --------------------------------------------------------------------------------------------------
 
   CloudKnoxCaptureControlTowerLifeCycleEvents:
-    DependsOn:
-    - TriggerCustomizationsOnLifeCycleEvent
     Type: AWS::Events::Rule
     Properties:
       Description: Capture Control Tower LifeCycle Events for CloudKnox and Trigger an Action
@@ -131,7 +129,7 @@ Resources:
             - .zip
       Description: CloudKnox Control Tower Lifecycle Event Lambda
       Handler: CloudKnox_TriggerLifecycleEvent.lambda_handler
-      MemorySize: '256'
+      MemorySize: 256
       Runtime: python3.7
       Environment:
         Variables:
