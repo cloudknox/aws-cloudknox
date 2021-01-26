@@ -218,7 +218,7 @@ Resources:
           - TriggerLifecyleEvent
       Role: !GetAtt CloudKnoxTriggerLifecycleEventLambdaRole.Arn
       Code:
-        S3Bucket: !Sub 'ck-controltower-8zwvs0yfk6at-${AWS::Region}'
+        S3Bucket: !Sub 'cloudknox-controltower-8zwvs0yfk6at-${AWS::Region}'
         S3Key: !Join 
           - ''
           - - CloudKnox_TriggerLifecycleEvent
@@ -257,8 +257,8 @@ Resources:
                   - 's3:GetObject'
                 Effect: Allow
                 Resource:
-                  - !Sub 'arn:${AWS::Partition}:s3:::ck-controltower-8zwvs0yfk6at-${AWS::Region}'
-                  - !Sub 'arn:${AWS::Partition}:s3:::ck-controltower-8zwvs0yfk6at-${AWS::Region}/*'
+                  - !Sub 'arn:${AWS::Partition}:s3:::cloudknox-controltower-8zwvs0yfk6at-${AWS::Region}'
+                  - !Sub 'arn:${AWS::Partition}:s3:::cloudknox-controltower-8zwvs0yfk6at-${AWS::Region}/*'
               - Sid: '2'
                 Effect: Allow
                 Action:
