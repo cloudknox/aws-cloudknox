@@ -39,8 +39,6 @@ def add_cloudknox_account(api_id,access_token,service_id,timestamp,url,
     conn = http.client.HTTPSConnection(url, port)
     content_type = "application/json"
     print('inside add_cloudknox_account')
-    print('api_id: '+ api_id )
-    print('accessToken: '+ access_token )
     print('serviceId: '+ service_id )
     print('timestamp: '+ timestamp )
     print('url: ' + url)
@@ -78,8 +76,6 @@ def get_access_token(service_id,timestamp,access_key,secret_key,url,port):
     content_type = "application/json"
     print('serviceId-accessToken: '+ service_id )
     print('timestamp-accessToken: '+ timestamp )
-    print('accessKey-accessToken: '+ access_key )
-    print('secretKey-accessToken: '+ secret_key )
     print('url-accessToken: ' + url)
 
     headers = {
@@ -137,7 +133,6 @@ def lambda_handler(event, context):
     timestamp = str(millis)
 
     access_token = get_access_token(service_id,timestamp,access_key,secret_key,url,443)
-    print('accessToken is: ' + access_token)
 
     cloudknox_sentry_account_id = os.environ['CloudKnoxSentryAccountId']
     event_details = event['detail']
@@ -157,9 +152,7 @@ def lambda_handler(event, context):
             cloudformation = boto3.client('cloudformation')
             for item in stackset_list:
                 try:
-                    print('ctlambda-apiId: '+ api_id )
                     print('ctlambda-eventName: ' + event_name)
-                    print('ctlambda-accessToken: '+ access_token )
                     print('ctlambda-serviceId: '+ service_id )
                     print('ctlambda-timestamp: '+ timestamp )
                     print('ctlambda-url: ' + url)
@@ -169,7 +162,7 @@ def lambda_handler(event, context):
                     print('ctlambda-accId: ' + acc_id)
                     cloudformation.create_stack_instances(StackSetName=item,
 							  Accounts=[acc_id], Regions=[region_name])
-                    logger.info('Processed %s Sucessfully', item)
+                    logger.info('Processed %s Successfully', item)
                     add_cloudknox_account(api_id, access_token, service_id, timestamp, url,
 					cloudknox_sentry_account_id, acc_id, 443)
                 except Exception as e:
