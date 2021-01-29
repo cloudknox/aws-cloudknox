@@ -74,9 +74,9 @@ def get_access_token(service_id,timestamp,access_key,secret_key,url,port):
     """Get CloudKnox access token."""
     conn = http.client.HTTPSConnection(url, port)
     content_type = "application/json"
-    print('serviceId-accessToken: '+ service_id )
-    print('timestamp-accessToken: '+ timestamp )
-    print('url-accessToken: ' + url)
+    print('serviceId: '+ service_id )
+    print('timestamp: '+ timestamp )
+    print('url: ' + url)
 
     headers = {
       'X-CloudKnox-Service-Account-Id': service_id,
@@ -90,7 +90,6 @@ def get_access_token(service_id,timestamp,access_key,secret_key,url,port):
     cloudknox_dict['secretKey'] = secret_key
 
     payload = json.dumps(cloudknox_dict)
-    print('payload-accessToken: ' + payload)
 
     conn.request("POST", "/api/v2/service-account/authenticate", payload, headers)
     res = conn.getresponse()
