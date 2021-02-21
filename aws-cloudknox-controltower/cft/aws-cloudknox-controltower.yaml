@@ -189,8 +189,6 @@ Resources:
           eventName:
           - CreateManagedAccount
           - UpdateManagedAccount
-          - EnableGuardrail
-          - DisableGuardrail
           - SetupLandingZone
           - UpdateLandingZone
           - RegisterOrganizationalUnit
